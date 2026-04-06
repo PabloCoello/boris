@@ -51,3 +51,7 @@ class OllamaClient:
         async for token in self.chat(messages):
             tokens.append(token)
         return "".join(tokens)
+
+    async def prompt(self, text: str) -> str:
+        """Single-prompt convenience: wraps text as a user message."""
+        return await self.chat_full([{"role": "user", "content": text}])

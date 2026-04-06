@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from pathlib import Path
 
 from loguru import logger
 
@@ -11,6 +12,8 @@ from boris.config import Config
 from boris.core.context import build_system_prompt
 from boris.core.orchestrator import parse_tool_call
 from boris.llm.ollama import OllamaClient
+from boris.memory.loader import load_memory_context
+from boris.memory.writer import save_episodic
 from boris.stt.whisper import WhisperSTT
 from boris.tts.xtts import TTSEngine
 from boris.vad.silero import AudioListener
@@ -29,9 +32,21 @@ async def main_loop(config: Config):
     # Wire echo cancellation
     tts.set_listener(listener)
 
+    # Load memory into context
+    memory_ctx = load_memory_context(
+        config.memory.data_dir,
+        profile_max_tokens=config.memory.profile_max_tokens,
+        index_max_tokens=config.memory.index_max_tokens,
+    )
+    if memory_ctx:
+        logger.info(f"Memoria cargada: {len(memory_ctx)} chars")
+
     # Build system prompt
-    system_prompt = build_system_prompt(config)
+    system_prompt = build_system_prompt(config, memory_context=memory_ctx or None)
     history: list[dict[str, str]] = []
+
+    # Episodic dir for saving conversation summaries
+    episodic_dir = Path(config.memory.data_dir) / "episodic"
 
     logger.info("Boris listo. Esperando órdenes, mi señor.")
 
@@ -84,7 +99,17 @@ async def main_loop(config: Config):
                 history = history[-40:]
 
         except KeyboardInterrupt:
-            logger.info("Boris se retira. Buenas noches, mi señor.")
+            logger.info("Boris se retira. Guardando memoria...")
+            if history:
+                try:
+                    await save_episodic(
+                        history,
+                        episodic_dir,
+                        summarize_fn=llm.prompt,
+                    )
+                except Exception as e:
+                    logger.error(f"Error guardando episodic: {e}")
+            logger.info("Buenas noches, mi señor.")
             break
         except Exception as e:
             logger.error(f"Error en el loop: {e}")
