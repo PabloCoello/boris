@@ -1,0 +1,91 @@
+"""Main async loop: listen → STT → LLM → orchestrator → TTS."""
+
+from __future__ import annotations
+
+import asyncio
+import time
+
+from loguru import logger
+
+from boris.config import Config
+from boris.core.context import build_system_prompt
+from boris.core.orchestrator import parse_tool_call
+from boris.llm.ollama import OllamaClient
+from boris.stt.whisper import WhisperSTT
+from boris.tts.xtts import TTSEngine
+from boris.vad.silero import AudioListener
+
+
+async def main_loop(config: Config):
+    """Run Boris: listen → transcribe → respond → speak, forever."""
+    logger.info("Iniciando Boris...")
+
+    # Initialize components
+    listener = AudioListener(config.assistant, config.audio)
+    stt = WhisperSTT(config.stt)
+    llm = OllamaClient(config.llm, config.secrets)
+    tts = TTSEngine(config.tts)
+
+    # Wire echo cancellation
+    tts.set_listener(listener)
+
+    # Build system prompt
+    system_prompt = build_system_prompt(config)
+    history: list[dict[str, str]] = []
+
+    logger.info("Boris listo. Esperando órdenes, mi señor.")
+
+    while True:
+        try:
+            # Listen for speech (single stream: detect + record)
+            audio = await listener.listen()
+
+            # Transcribe
+            t_turn_start = time.perf_counter()
+            text = await stt.transcribe(audio)
+
+            if not text.strip():
+                logger.debug("Transcripción vacía, ignorando")
+                continue
+
+            logger.info(f"Señor dice: {text}")
+
+            # Build messages
+            history.append({"role": "user", "content": text})
+            messages = [{"role": "system", "content": system_prompt}] + history
+
+            # Get LLM response
+            response = await llm.chat_full(messages)
+            logger.info(f"Boris dice: {response[:100]}...")
+            history.append({"role": "assistant", "content": response})
+
+            # Parse for tool calls
+            tool_call, spoken_text = parse_tool_call(response)
+
+            if tool_call:
+                tool_name = tool_call.get("tool", "unknown")
+                tool_args = tool_call.get("args", {})
+                logger.info(f"Tool: {tool_name}({tool_args})")
+
+                # TODO: execute tool and get result
+                # For now, acknowledge the tool call
+                if not spoken_text:
+                    spoken_text = f"Entendido, mi señor. Ejecutando {tool_name}."
+
+            # Speak only the text part (no JSON)
+            if spoken_text:
+                await tts.speak(spoken_text)
+
+            t_turn_total = (time.perf_counter() - t_turn_start) * 1000
+            logger.info(f"Turno completo: {t_turn_total:.0f}ms")
+
+            # Keep history manageable (last 20 turns)
+            if len(history) > 40:
+                history = history[-40:]
+
+        except KeyboardInterrupt:
+            logger.info("Boris se retira. Buenas noches, mi señor.")
+            break
+        except Exception as e:
+            logger.error(f"Error en el loop: {e}")
+            await asyncio.sleep(1)

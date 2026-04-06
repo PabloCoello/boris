@@ -1,0 +1,37 @@
+assistant:
+  name: Boris
+  language: es
+  wake_word: boris
+
+audio:
+  input_device_name: Razer Seiren X
+
+stt:
+  model: small         # small en CPU ~0.3s; medium ~2.5s; large-v3 necesita GPU
+  language: es
+  device: cpu
+
+tts:
+  model: vits_es      # vits_es (rápido, ~300ms) o xtts_v2 (lento, voz clonada)
+  language: es
+  speaker_wav:         # solo para xtts_v2
+
+llm:
+  model: gemma3:12b    # gemma3:12b (~7GB, rápido) o gemma4-26b (17GB, lento)
+  temperature: 0.7
+  max_tokens: 256
+
+memory:
+  profile_max_tokens: 800
+  index_max_tokens: 400
+  data_dir: data/memory
+
+skills:
+  home:
+    enabled: false
+  garmin:
+    enabled: true
+  music:
+    backend: spotify
+  search:
+    url: http://localhost:8080
