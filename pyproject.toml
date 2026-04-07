@@ -18,6 +18,7 @@ dependencies = [
     "torchaudio>=2.4,<2.6",
     "scipy>=1.11",
     "aiohttp>=3.9",
+    "garminconnect>=0.2",
 ]
 
 [project.optional-dependencies]
