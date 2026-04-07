@@ -23,6 +23,18 @@ def build_registry(config: Config) -> SkillRegistry:
 
         registry.register(SearchSkill(config.skills.search.url))
 
+    if config.secrets.spotify_client_id:
+        from boris.skills.music import MusicControlSkill, MusicPlaySkill
+
+        registry.register(MusicPlaySkill(
+            client_id=config.secrets.spotify_client_id,
+            client_secret=config.secrets.spotify_client_secret,
+        ))
+        registry.register(MusicControlSkill(
+            client_id=config.secrets.spotify_client_id,
+            client_secret=config.secrets.spotify_client_secret,
+        ))
+
     if config.skills.garmin.enabled and config.secrets.garmin_email:
         from boris.skills.garmin import GarminSkill
 

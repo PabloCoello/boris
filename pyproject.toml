@@ -19,6 +19,7 @@ dependencies = [
     "scipy>=1.11",
     "aiohttp>=3.9",
     "garminconnect>=0.2",
+    "spotipy>=2.23",
 ]
 
 [project.optional-dependencies]
