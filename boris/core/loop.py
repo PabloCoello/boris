@@ -95,6 +95,12 @@ async def main_loop(config: Config):
                 spoken_text = await llm.chat_full(messages)
                 history.append({"role": "assistant", "content": spoken_text})
 
+                # Guard against nested tool call in the follow-up response
+                nested_tool, cleaned = parse_tool_call(spoken_text)
+                if nested_tool:
+                    logger.warning(f"Nested tool call ignorado: {nested_tool.get('tool')}")
+                    spoken_text = cleaned or f"Listo, mi señor. {result.message}"
+
             # Speak only the text part (no JSON)
             if spoken_text:
                 await tts.speak(spoken_text)

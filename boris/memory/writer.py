@@ -16,11 +16,14 @@ Conversación:
 {conversation}"""
 
 
+_ROLE_LABELS = {"user": "Señor", "assistant": "Boris", "system": "[Sistema]"}
+
+
 def _format_history(history: list[dict[str, str]]) -> str:
     """Format conversation history as readable text."""
     lines = []
     for msg in history:
-        role = "Señor" if msg["role"] == "user" else "Boris"
+        role = _ROLE_LABELS.get(msg["role"], msg["role"])
         lines.append(f"{role}: {msg['content']}")
     return "\n".join(lines)
 

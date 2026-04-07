@@ -61,7 +61,9 @@ class MusicPlaySkill(Skill):
 
         item = items[0]
         name = item.get("name", query)
-        uri = item["uri"]
+        uri = item.get("uri")
+        if not uri:
+            return SkillResult(ok=False, message=f"Resultado sin URI para '{query}'.")
 
         # Start playback
         if search_type == "track":
@@ -116,7 +118,11 @@ class MusicControlSkill(Skill):
             sp.previous_track()
             return SkillResult(ok=True, message="Canción anterior.")
         elif action == "volume":
-            level = int(kwargs.get("level", 50))
+            try:
+                level = int(kwargs.get("level", 50))
+            except (TypeError, ValueError):
+                return SkillResult(ok=False, message="Nivel de volumen inválido, debe ser un número 0-100.")
+            level = max(0, min(100, level))
             sp.volume(level)
             return SkillResult(ok=True, message=f"Volumen ajustado a {level}%.")
 
