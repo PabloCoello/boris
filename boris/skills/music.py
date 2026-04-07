@@ -8,24 +8,16 @@ from loguru import logger
 
 from boris.skills.base import Skill, SkillResult
 
-SEARCH_TYPE_MAP = {
-    "artist": "artist",
-    "album": "album",
-    "playlist": "playlist",
-    "track": "track",
-}
-
+SEARCH_TYPES = {"artist", "album", "playlist", "track"}
 CONTROL_ACTIONS = {"pause", "next", "prev", "volume"}
 
 
-class MusicPlaySkill(Skill):
-    name = "music_play"
-    description = "Reproduce música vía Spotify."
+class _SpotifyMixin:
+    """Shared Spotify client init — prevents credentials in repr."""
 
-    def __init__(self, client_id: str, client_secret: str):
-        self._client_id = client_id
-        self._client_secret = client_secret
-        self._sp = None
+    _client_id: str
+    _client_secret: str
+    _sp = None
 
     def _get_spotify(self):
         if self._sp is None:
@@ -41,19 +33,32 @@ class MusicPlaySkill(Skill):
             logger.info("Spotify: autenticado")
         return self._sp
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(client_id='{self._client_id[:4]}***')"
+
+
+class MusicPlaySkill(_SpotifyMixin, Skill):
+    name = "music_play"
+    description = "Reproduce música vía Spotify."
+
+    def __init__(self, client_id: str, client_secret: str):
+        self._client_id = client_id
+        self._client_secret = client_secret
+
     async def execute(self, **kwargs) -> SkillResult:
         query = kwargs.get("query")
         if not query:
             return SkillResult(ok=False, message="Falta la búsqueda (query).")
 
-        search_type = SEARCH_TYPE_MAP.get(kwargs.get("type", "track"), "track")
+        search_type = kwargs.get("type", "track")
+        if search_type not in SEARCH_TYPES:
+            search_type = "track"
         return await asyncio.to_thread(self._play, query, search_type)
 
     def _play(self, query: str, search_type: str) -> SkillResult:
         sp = self._get_spotify()
         results = sp.search(q=query, type=search_type, limit=1)
 
-        # Find the first result in the appropriate category
         key = f"{search_type}s"
         items = results.get(key, {}).get("items", [])
         if not items:
@@ -65,7 +70,6 @@ class MusicPlaySkill(Skill):
         if not uri:
             return SkillResult(ok=False, message=f"Resultado sin URI para '{query}'.")
 
-        # Start playback
         if search_type == "track":
             sp.start_playback(uris=[uri])
         else:
@@ -74,27 +78,13 @@ class MusicPlaySkill(Skill):
         return SkillResult(ok=True, message=f"Reproduciendo: {name}.")
 
 
-class MusicControlSkill(Skill):
+class MusicControlSkill(_SpotifyMixin, Skill):
     name = "music_control"
     description = "Controla la reproducción de Spotify."
 
     def __init__(self, client_id: str, client_secret: str):
         self._client_id = client_id
         self._client_secret = client_secret
-        self._sp = None
-
-    def _get_spotify(self):
-        if self._sp is None:
-            import spotipy
-            from spotipy.oauth2 import SpotifyOAuth
-
-            self._sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-                client_id=self._client_id,
-                client_secret=self._client_secret,
-                redirect_uri="http://localhost:8888/callback",
-                scope="user-modify-playback-state user-read-playback-state",
-            ))
-        return self._sp
 
     async def execute(self, **kwargs) -> SkillResult:
         action = kwargs.get("action")

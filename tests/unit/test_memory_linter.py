@@ -21,9 +21,17 @@ def memory_dir(tmp_path: Path):
     return tmp_path
 
 
+def _single_response(profile: str, entities: str, index: str) -> str:
+    return f"{profile}\n---\n{entities}\n---\n{index}"
+
+
 @pytest.mark.asyncio
 async def test_creates_profile(memory_dir: Path):
-    mock_llm = AsyncMock(return_value="El señor es un ingeniero que prefiere café con leche.")
+    mock_llm = AsyncMock(return_value=_single_response(
+        "El señor es un ingeniero que prefiere café con leche.",
+        "- Michi: gato",
+        "- 2026-04-01: clima",
+    ))
 
     await lint_memory(memory_dir, synthesize_fn=mock_llm)
 
@@ -34,11 +42,11 @@ async def test_creates_profile(memory_dir: Path):
 
 @pytest.mark.asyncio
 async def test_creates_entities(memory_dir: Path):
-    mock_llm = AsyncMock(side_effect=[
+    mock_llm = AsyncMock(return_value=_single_response(
         "Perfil sintetizado.",
         "- Michi: gato del señor",
         "- 2026-04-01: clima",
-    ])
+    ))
 
     await lint_memory(memory_dir, synthesize_fn=mock_llm)
 
@@ -49,11 +57,11 @@ async def test_creates_entities(memory_dir: Path):
 
 @pytest.mark.asyncio
 async def test_creates_index(memory_dir: Path):
-    mock_llm = AsyncMock(side_effect=[
+    mock_llm = AsyncMock(return_value=_single_response(
         "Perfil.",
         "Entidades.",
         "- 2026-04-01: clima\n- 2026-04-02: recordatorio",
-    ])
+    ))
 
     await lint_memory(memory_dir, synthesize_fn=mock_llm)
 
@@ -67,13 +75,27 @@ async def test_preserves_existing_profile(memory_dir: Path):
     existing_profile = memory_dir / "profile.md"
     existing_profile.write_text("Dato previo importante.")
 
-    mock_llm = AsyncMock(return_value="Dato previo importante. Nuevos datos añadidos.")
+    mock_llm = AsyncMock(return_value=_single_response(
+        "Dato previo importante. Nuevos datos.",
+        "Entidades.",
+        "Índice.",
+    ))
 
     await lint_memory(memory_dir, synthesize_fn=mock_llm)
 
     # LLM should receive existing profile as context
     call_args = mock_llm.call_args_list[0][0][0]
     assert "Dato previo importante" in call_args
+
+
+@pytest.mark.asyncio
+async def test_single_llm_call(memory_dir: Path):
+    mock_llm = AsyncMock(return_value=_single_response("P", "E", "I"))
+
+    await lint_memory(memory_dir, synthesize_fn=mock_llm)
+
+    # Should only call LLM once (not 3 times)
+    assert mock_llm.call_count == 1
 
 
 @pytest.mark.asyncio

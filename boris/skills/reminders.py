@@ -33,16 +33,12 @@ class ReminderStore:
         return list(self.reminders)
 
 
-# Singleton store shared between both skills
-_store = ReminderStore()
-
-
 class ReminderSkill(Skill):
     name = "reminder"
     description = "Crea un recordatorio."
 
-    def __init__(self):
-        self._store = _store
+    def __init__(self, store: ReminderStore):
+        self._store = store
 
     async def execute(self, **kwargs) -> SkillResult:
         text = kwargs.get("text")
@@ -68,8 +64,8 @@ class RemindersListSkill(Skill):
     name = "reminders_list"
     description = "Lista recordatorios pendientes."
 
-    def __init__(self):
-        self._store = _store
+    def __init__(self, store: ReminderStore):
+        self._store = store
 
     async def execute(self, **kwargs) -> SkillResult:
         reminders = self._store.all()

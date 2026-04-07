@@ -10,27 +10,21 @@ from pathlib import Path
 
 from loguru import logger
 
-PROFILE_PROMPT = """Sintetiza un perfil del usuario a partir de estas notas episódicas.
-Incluye: preferencias, rutinas, personas y mascotas mencionadas, datos relevantes.
-Mantén lo que ya se sabía del perfil anterior y añade lo nuevo.
-Máximo 800 tokens. En español.
+LINT_PROMPT = """Analiza estas notas episódicas y genera TRES secciones separadas por la línea "---".
+
+SECCIÓN 1 — PERFIL: Sintetiza un perfil del usuario. Incluye preferencias, rutinas, personas/mascotas, datos relevantes.
+Mantén lo que ya se sabía del perfil anterior y añade lo nuevo. Máximo 800 tokens.
+
+SECCIÓN 2 — ENTIDADES: Lista todas las entidades mencionadas (personas, mascotas, lugares, dispositivos).
+Formato: una línea por entidad con "- Nombre: descripción breve".
+
+SECCIÓN 3 — ÍNDICE: Genera un índice breve. Formato: una línea por día con "- YYYY-MM-DD: resumen de 5-10 palabras".
+Máximo 400 tokens.
+
+Todo en español.
 
 Perfil anterior:
 {existing_profile}
-
-Notas episódicas:
-{episodics}"""
-
-ENTITIES_PROMPT = """Extrae todas las entidades mencionadas (personas, mascotas, lugares, dispositivos) \
-de estas notas episódicas. Formato: una línea por entidad con "- Nombre: descripción breve".
-En español.
-
-Notas episódicas:
-{episodics}"""
-
-INDEX_PROMPT = """Genera un índice breve de estas notas episódicas.
-Formato: una línea por día con "- YYYY-MM-DD: resumen de 5-10 palabras".
-Máximo 400 tokens. En español.
 
 Notas episódicas:
 {episodics}"""
@@ -60,29 +54,29 @@ async def lint_memory(
         logger.info("No hay episódicos, nada que sintetizar.")
         return
 
-    # Profile
     existing_profile = ""
     profile_path = data_dir / "profile.md"
     if profile_path.exists():
         existing_profile = profile_path.read_text(encoding="utf-8").strip()
 
-    profile = await synthesize_fn(
-        PROFILE_PROMPT.format(existing_profile=existing_profile or "(vacío)", episodics=episodics_text)
+    # Single LLM call for all three outputs
+    result = await synthesize_fn(
+        LINT_PROMPT.format(existing_profile=existing_profile or "(vacío)", episodics=episodics_text)
     )
+
+    # Split into sections by "---" separator
+    sections = [s.strip() for s in result.split("---")]
+
+    profile = sections[0] if len(sections) > 0 else ""
+    entities = sections[1] if len(sections) > 1 else ""
+    index = sections[2] if len(sections) > 2 else ""
+
     profile_path.write_text(profile + "\n", encoding="utf-8")
     logger.info("profile.md actualizado")
 
-    # Entities
-    entities = await synthesize_fn(
-        ENTITIES_PROMPT.format(episodics=episodics_text)
-    )
     (data_dir / "entities.md").write_text(entities + "\n", encoding="utf-8")
     logger.info("entities.md actualizado")
 
-    # Index
-    index = await synthesize_fn(
-        INDEX_PROMPT.format(episodics=episodics_text)
-    )
     (data_dir / "index.md").write_text(index + "\n", encoding="utf-8")
     logger.info("index.md actualizado")
 

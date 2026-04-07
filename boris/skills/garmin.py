@@ -21,6 +21,9 @@ class GarminSkill(Skill):
         self._password = password
         self._client = None
 
+    def __repr__(self) -> str:
+        return f"GarminSkill(email='{self._email[:3]}***')"
+
     def _get_client(self):
         """Lazy-init Garmin client (login is expensive)."""
         if self._client is None:

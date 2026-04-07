@@ -13,10 +13,11 @@ def build_registry(config: Config) -> SkillRegistry:
     registry = SkillRegistry()
 
     # Import and register skills conditionally
-    from boris.skills.reminders import ReminderSkill, RemindersListSkill
+    from boris.skills.reminders import ReminderSkill, RemindersListSkill, ReminderStore
 
-    registry.register(ReminderSkill())
-    registry.register(RemindersListSkill())
+    reminder_store = ReminderStore()
+    registry.register(ReminderSkill(reminder_store))
+    registry.register(RemindersListSkill(reminder_store))
 
     if config.skills.search.url:
         from boris.skills.search import SearchSkill
