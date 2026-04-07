@@ -36,6 +36,13 @@ def build_registry(config: Config) -> SkillRegistry:
             client_secret=config.secrets.spotify_client_secret,
         ))
 
+    if config.secrets.google_credentials_json:
+        from boris.skills.calendar import CalendarSkill
+
+        registry.register(CalendarSkill(
+            credentials_json=config.secrets.google_credentials_json,
+        ))
+
     if config.skills.garmin.enabled and config.secrets.garmin_email:
         from boris.skills.garmin import GarminSkill
 

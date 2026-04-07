@@ -32,7 +32,7 @@ Herramientas disponibles:
 - home: Controla dispositivos del hogar. Args: action (str), entity_id (str).
 - reminder: Crea un recordatorio. Args: text (str), datetime (str ISO 8601).
 - reminders_list: Lista recordatorios pendientes. Sin args.
-- calendar: Eventos próximos. Args: days (int, default 7), source (str: google/outlook/all).
+- calendar: Eventos próximos del calendario. Args: days (int, default 7).
 - music_play: Reproduce música. Args: query (str), type (str: artist/album/playlist).
 - music_control: Controla reproducción. Args: action (str: pause/next/prev/volume).
 - search: Búsqueda web. Args: query (str).

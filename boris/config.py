@@ -88,9 +88,6 @@ class SecretsConfig:
     spotify_client_id: str = ""
     spotify_client_secret: str = ""
     google_credentials_json: str = ""
-    microsoft_client_id: str = ""
-    microsoft_client_secret: str = ""
-    microsoft_tenant_id: str = ""
 
 
 @dataclass

@@ -8,7 +8,7 @@ Construir un asistente de voz personal llamado **Boris** que corra 24/7 en una w
 - Un único usuario (el propietario de la máquina).
 
 ### Principios
-- **Local-first**: STT, LLM y TTS corren en la máquina. Servicios cloud solo donde aportan valor claro (Spotify, Google Calendar, Outlook).
+- **Local-first**: STT, LLM y TTS corren en la máquina. Servicios cloud solo donde aportan valor claro (Spotify, Google Calendar).
 - **Voz como interfaz principal**: no hay UI web ni app.
 - **Memoria que crece**: el asistente recuerda y sintetiza, no solo almacena.
 - **Incremental**: cada fase produce un sistema funcional antes de avanzar.
@@ -29,7 +29,7 @@ Construir un asistente de voz personal llamado **Boris** que corra 24/7 en una w
 | Domótica | Home Assistant | container Docker |
 | Salud | garminconnect | — |
 | Música | Spotify via spotipy | cuenta premium |
-| Calendario | Google Calendar + Outlook | OAuth (Google) + Microsoft Graph API |
+| Calendario | Google Calendar | OAuth (Google) |
 | Echo cancel | Mute micrófono durante TTS | — |
 
 ---
@@ -86,7 +86,7 @@ boris/
 │   ├── home.py              # Home Assistant API
 │   ├── music.py             # MPD / Spotify
 │   ├── search.py            # SearXNG
-│   ├── calendar.py          # Google Calendar + Outlook (sync)
+│   ├── calendar.py          # Google Calendar (OAuth)
 │   ├── reminders.py         # APScheduler
 │   └── garmin.py            # garminconnect
 ├── diag.py                  # diagnóstico de hardware y servicios
@@ -130,10 +130,7 @@ GARMIN_EMAIL=...
 GARMIN_PASSWORD=...
 SPOTIFY_CLIENT_ID=...
 SPOTIFY_CLIENT_SECRET=...
-GOOGLE_CREDENTIALS_JSON=...     # ruta a credentials.json de Google OAuth
-MICROSOFT_CLIENT_ID=...
-MICROSOFT_CLIENT_SECRET=...
-MICROSOFT_TENANT_ID=...
+GOOGLE_CREDENTIALS_JSON=data/google-credentials.json
 ```
 
 **config.yaml** — opciones de comportamiento:
@@ -287,7 +284,7 @@ No mezcles texto y JSON en la misma respuesta.
 | `home` | `action`, `entity_id`, `**kwargs` | Controla dispositivos Home Assistant |
 | `reminder` | `text`, `datetime` | Crea un recordatorio |
 | `reminders_list` | — | Lista recordatorios pendientes |
-| `calendar` | `days` (default 7), `source` (google/outlook/all) | Eventos próximos (Google Calendar + Outlook) |
+| `calendar` | `days` (default 7) | Eventos próximos (Google Calendar) |
 | `music_play` | `query`, `type` (artist/album/playlist) | Reproduce música |
 | `music_control` | `action` (pause/next/prev/volume) | Controla reproducción |
 | `search` | `query` | Búsqueda web (top 3 snippets) |
@@ -342,7 +339,7 @@ No mezcles texto y JSON en la misma respuesta.
 
 ### Fase 3 — Skills básicas
 - [ ] "Boris, ponme un recordatorio para mañana a las 10" → recordatorio creado y confirmado por voz.
-- [ ] "Boris, ¿qué tengo hoy en el calendario?" → lee eventos del día de Google Calendar y Outlook combinados.
+- [ ] "Boris, ¿qué tengo hoy en el calendario?" → lee eventos del día de Google Calendar.
 - [ ] "Boris, busca cuántos habitantes tiene Asturias" → responde con dato de SearXNG.
 - [ ] "Boris, pon música de Rosalía" → Spotify reproduce música de Rosalía.
 - [ ] JSON malformado del LLM → Boris responde en texto normal sin crashear.
@@ -368,7 +365,7 @@ No mezcles texto y JSON en la misma respuesta.
 ## Decisiones tomadas
 
 1. **Dispositivos HA iniciales**: luces inteligentes. Se irán añadiendo dispositivos progresivamente.
-2. **Calendario**: sincronización con Google Calendar + Outlook (Google OAuth + Microsoft Graph API).
+2. **Calendario**: Google Calendar como fuente única. Otros calendarios (Outlook, etc.) se sincronizan vía ICS URL en Google Calendar.
 3. **Música**: Spotify vía `spotipy`.
 4. **Personalidad de Boris**: definida (ver sección Personalidad).
 5. **Echo cancellation**: sí — micrófono se silencia durante reproducción de TTS.

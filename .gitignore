@@ -8,7 +8,12 @@ build/
 *.log
 logs/
 data/memory/episodic/*.md
+data/memory/profile.md
+data/memory/entities.md
+data/memory/index.md
 data/audio/*.wav
+data/google-credentials.json
+data/google-token.json
 .ruff_cache/
 .pytest_cache/
 .coverage
