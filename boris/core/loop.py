@@ -10,10 +10,11 @@ from loguru import logger
 
 from boris.config import Config
 from boris.core.context import build_system_prompt
-from boris.core.orchestrator import parse_tool_call
+from boris.core.orchestrator import execute_tool_call, parse_tool_call
 from boris.llm.ollama import OllamaClient
 from boris.memory.loader import load_memory_context
 from boris.memory.writer import save_episodic
+from boris.skills.registry import build_registry
 from boris.stt.whisper import WhisperSTT
 from boris.tts.xtts import TTSEngine
 from boris.vad.silero import AudioListener
@@ -31,6 +32,9 @@ async def main_loop(config: Config):
 
     # Wire echo cancellation
     tts.set_listener(listener)
+
+    # Build skill registry
+    registry = build_registry(config)
 
     # Load memory into context
     memory_ctx = load_memory_context(
@@ -78,14 +82,18 @@ async def main_loop(config: Config):
             tool_call, spoken_text = parse_tool_call(response)
 
             if tool_call:
-                tool_name = tool_call.get("tool", "unknown")
-                tool_args = tool_call.get("args", {})
-                logger.info(f"Tool: {tool_name}({tool_args})")
+                # Execute the skill
+                result = await execute_tool_call(tool_call, registry)
+                logger.info(f"Skill result: ok={result.ok}, msg={result.message[:80]}")
 
-                # TODO: execute tool and get result
-                # For now, acknowledge the tool call
-                if not spoken_text:
-                    spoken_text = f"Entendido, mi señor. Ejecutando {tool_name}."
+                # Inject result into history and get LLM natural language response
+                history.append({
+                    "role": "system",
+                    "content": f"Resultado de {tool_call.get('tool')}: {result.message}",
+                })
+                messages = [{"role": "system", "content": system_prompt}] + history
+                spoken_text = await llm.chat_full(messages)
+                history.append({"role": "assistant", "content": spoken_text})
 
             # Speak only the text part (no JSON)
             if spoken_text:

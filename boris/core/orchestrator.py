@@ -6,6 +6,10 @@ import json
 
 from loguru import logger
 
+from boris.skills.base import SkillRegistry, SkillResult
+
+SKILL_TIMEOUT = 5.0
+
 
 def parse_tool_call(response: str) -> tuple[dict | None, str]:
     """Parse LLM response for tool calls.
@@ -29,3 +33,17 @@ def parse_tool_call(response: str) -> tuple[dict | None, str]:
         pass
 
     return None, response
+
+
+async def execute_tool_call(tool_call: dict, registry: SkillRegistry) -> SkillResult:
+    """Execute a parsed tool call against the skill registry."""
+    tool_name = tool_call.get("tool", "")
+    tool_args = tool_call.get("args", {})
+
+    skill = registry.get(tool_name)
+    if skill is None:
+        logger.warning(f"Tool desconocida: {tool_name}")
+        return SkillResult(ok=False, message=f"No conozco la acción '{tool_name}'.")
+
+    logger.info(f"Ejecutando skill: {tool_name}({tool_args})")
+    return await skill.run(timeout=SKILL_TIMEOUT, **tool_args)
