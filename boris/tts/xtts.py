@@ -13,6 +13,7 @@ from loguru import logger
 from scipy.signal import resample
 
 from boris.config import TTSConfig
+from boris.tts.normalize import normalize_for_tts
 
 if TYPE_CHECKING:
     from boris.vad.silero import AudioListener
@@ -89,6 +90,7 @@ class TTSEngine:
         """Blocking synthesis — runs in a thread. Returns (audio_48k, synth_ms)."""
         t_synth_start = time.perf_counter()
 
+        text = normalize_for_tts(text)
         tts_kwargs: dict = {"text": text}
         if self._needs_speaker:
             tts_kwargs["language"] = self.config.language

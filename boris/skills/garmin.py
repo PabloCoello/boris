@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import date
+from pathlib import Path
 
 from loguru import logger
 
@@ -16,21 +17,23 @@ class GarminSkill(Skill):
     name = "garmin"
     description = "Datos de salud desde Garmin Connect."
 
-    def __init__(self, email: str, password: str):
+    def __init__(self, email: str, password: str, tokenstore: str = "data/garmin-tokens"):
         self._email = email
         self._password = password
+        self._tokenstore = str(Path(tokenstore).resolve())
         self._client = None
 
     def __repr__(self) -> str:
         return f"GarminSkill(email='{self._email[:3]}***')"
 
     def _get_client(self):
-        """Lazy-init Garmin client (login is expensive)."""
+        """Lazy-init Garmin client. Uses cached tokens to avoid Cloudflare blocks."""
         if self._client is None:
             from garminconnect import Garmin
 
+            Path(self._tokenstore).mkdir(parents=True, exist_ok=True)
             self._client = Garmin(self._email, self._password)
-            self._client.login()
+            self._client.login(tokenstore=self._tokenstore)
             logger.info("Garmin: login exitoso")
         return self._client
 
@@ -45,7 +48,13 @@ class GarminSkill(Skill):
         if handler is None:
             return SkillResult(ok=False, message=f"Métrica '{metric}' no implementada.")
 
-        return await asyncio.to_thread(handler)
+        try:
+            return await asyncio.to_thread(handler)
+        except Exception as e:
+            # Session expired — reset client and retry once
+            logger.warning(f"Garmin request failed ({e}), retrying with fresh session")
+            self._client = None
+            return await asyncio.to_thread(handler)
 
     def _get_sleep(self) -> SkillResult:
         client = self._get_client()

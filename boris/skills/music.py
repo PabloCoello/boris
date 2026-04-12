@@ -27,7 +27,7 @@ class _SpotifyMixin:
             self._sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
                 client_id=self._client_id,
                 client_secret=self._client_secret,
-                redirect_uri="http://localhost:8888/callback",
+                redirect_uri="http://127.0.0.1:8888/callback",
                 scope="user-modify-playback-state user-read-playback-state",
             ))
             logger.info("Spotify: autenticado")
