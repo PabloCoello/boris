@@ -2,6 +2,8 @@ assistant:
   name: Boris
   language: es
   wake_word: boris
+  wake_word_model: data/models/boris_wakeword.onnx
+  wake_word_threshold: 0.3
 
 audio:
   input_device_name: Razer Seiren X

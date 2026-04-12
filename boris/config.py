@@ -15,6 +15,8 @@ class AssistantConfig:
     name: str = "Boris"
     language: str = "es"
     wake_word: str = "boris"
+    wake_word_model: str = ""  # path to custom .onnx model; empty = pre-trained fallback
+    wake_word_threshold: float = 0.5
 
 
 @dataclass

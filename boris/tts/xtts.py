@@ -58,6 +58,13 @@ class TTSEngine:
         """Register the audio listener for echo cancellation."""
         self._listener = listener
 
+    def stop(self):
+        """Interrupt playback immediately (called from any thread)."""
+        sd.stop()
+        # Unmute mic right away so the listener can capture speech
+        if self._listener:
+            self._listener.unmute()
+
     async def speak(self, text: str):
         """Synthesize and play text. Mutes microphone during playback."""
         if not text.strip():

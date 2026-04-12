@@ -1,4 +1,4 @@
-"""Main async loop: listen → STT → LLM → orchestrator → TTS."""
+"""Main async loop: wake word → listen → STT → LLM → orchestrator → TTS."""
 
 from __future__ import annotations
 
@@ -18,10 +18,11 @@ from boris.skills.registry import build_registry
 from boris.stt.whisper import WhisperSTT
 from boris.tts.xtts import TTSEngine
 from boris.vad.silero import AudioListener
+from boris.wakeword.detector import WakeWordDetector
 
 
 async def main_loop(config: Config):
-    """Run Boris: listen → transcribe → respond → speak, forever."""
+    """Run Boris: wake word → listen → transcribe → respond → speak, forever."""
     logger.info("Iniciando Boris...")
 
     # Initialize components
@@ -52,14 +53,33 @@ async def main_loop(config: Config):
     # Episodic dir for saving conversation summaries
     episodic_dir = Path(config.memory.data_dir) / "episodic"
 
-    logger.info("Boris listo. Esperando órdenes, mi señor.")
+    # Wake word detector — own mic stream, never muted
+    ww_model = config.assistant.wake_word_model
+    ww_detector = WakeWordDetector(
+        model_path=ww_model if ww_model else None,
+        threshold=config.assistant.wake_word_threshold,
+        device_name=config.audio.input_device_name,
+    )
+
+    loop = asyncio.get_event_loop()
+    ww_detector.start(loop)
+
+    logger.info("Boris listo. Esperando wake word...")
 
     while True:
         try:
-            # Listen for speech (single stream: detect + record)
+            # ── Phase 1: Wait for wake word ──────────────────────────
+            await ww_detector.wait()
+            ww_detector.reset()
+            logger.info("Wake word detectado")
+
+            # If TTS was playing, stop it (barge-in)
+            tts.stop()
+
+            # ── Phase 2: Listen for speech (VAD-based) ───────────────
             audio = await listener.listen()
 
-            # Transcribe
+            # ── Phase 3: Transcribe ──────────────────────────────────
             t_turn_start = time.perf_counter()
             text = await stt.transcribe(audio)
 
@@ -69,24 +89,22 @@ async def main_loop(config: Config):
 
             logger.info(f"Señor dice: {text}")
 
-            # Build messages
+            # ── Phase 4: LLM ────────────────────────────────────────
             history.append({"role": "user", "content": text})
             messages = [{"role": "system", "content": system_prompt}] + history
 
-            # Get LLM response
             response = await llm.chat_full(messages)
             logger.info(f"Boris dice: {response[:100]}...")
             history.append({"role": "assistant", "content": response})
 
-            # Parse for tool calls
+            # ── Phase 5: Tool call dispatch ──────────────────────────
             tool_call, spoken_text = parse_tool_call(response)
 
             if tool_call:
-                # Execute the skill
                 result = await execute_tool_call(tool_call, registry)
                 logger.info(f"Skill result: ok={result.ok}, msg={result.message[:80]}")
 
-                # Inject result into history and get LLM natural language response
+                # Inject result and get natural language response
                 history.append({
                     "role": "system",
                     "content": f"Resultado de {tool_call.get('tool')}: {result.message}",
@@ -95,25 +113,26 @@ async def main_loop(config: Config):
                 spoken_text = await llm.chat_full(messages)
                 history.append({"role": "assistant", "content": spoken_text})
 
-                # Guard against nested tool call in the follow-up response
+                # Guard against nested tool call
                 nested_tool, cleaned = parse_tool_call(spoken_text)
                 if nested_tool:
                     logger.warning(f"Nested tool call ignorado: {nested_tool.get('tool')}")
                     spoken_text = cleaned or f"Listo, mi señor. {result.message}"
 
-            # Speak only the text part (no JSON)
+            # ── Phase 6: Speak (can be interrupted by wake word) ─────
             if spoken_text:
                 await tts.speak(spoken_text)
 
             t_turn_total = (time.perf_counter() - t_turn_start) * 1000
             logger.info(f"Turno completo: {t_turn_total:.0f}ms")
 
-            # Keep history manageable (last 20 turns)
+            # Keep history manageable
             if len(history) > 40:
                 history = history[-40:]
 
         except KeyboardInterrupt:
             logger.info("Boris se retira. Guardando memoria...")
+            ww_detector.stop()
             if history:
                 try:
                     await save_episodic(
