@@ -21,3 +21,5 @@ data/garmin-tokens/
 .pytest_cache/
 .coverage
 htmlcov/
+*.onnx
+*.npy
