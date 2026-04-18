@@ -17,6 +17,10 @@ class AssistantConfig:
     wake_word: str = "boris"
     wake_word_model: str = ""  # path to custom .onnx model; empty = pre-trained fallback
     wake_word_threshold: float = 0.5
+    summon_phrase: str = "manifiéstate"
+    dismiss_phrase: str = "eso es todo"
+    summon_timeout_s: int = 120
+    follow_up_timeout_s: int = 10
 
 
 @dataclass
@@ -44,6 +48,8 @@ class LLMConfig:
 @dataclass
 class AudioConfig:
     input_device_name: str | None = None  # None = system default
+    feedback_sounds: bool = True
+    feedback_volume: float = 0.7  # 0.0–1.0
 
 
 @dataclass

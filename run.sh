@@ -37,8 +37,12 @@ else
     fi
 fi
 
-# Check that the configured model is available
-MODEL=$(grep -oP 'model:\s*\K\S+' config.yaml | head -1)
+# Check that the configured LLM model is available
+MODEL=$(python3 -c "
+import yaml
+c = yaml.safe_load(open('config.yaml'))
+print(c.get('llm',{}).get('model',''))
+" 2>/dev/null || echo "")
 if ollama list 2>/dev/null | grep -q "${MODEL}"; then
     ok "Model '${MODEL}' available"
 else

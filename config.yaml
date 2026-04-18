@@ -4,9 +4,15 @@ assistant:
   wake_word: boris
   wake_word_model: data/models/boris_wakeword.onnx
   wake_word_threshold: 0.3
+  summon_phrase: "manifiéstate"
+  dismiss_phrase: "eso es todo"
+  summon_timeout_s: 120
+  follow_up_timeout_s: 10
 
 audio:
   input_device_name: Razer Seiren X
+  feedback_sounds: true
+  feedback_volume: 0.3
 
 stt:
   model: small         # small en CPU ~0.3s; medium ~2.5s; large-v3 necesita GPU

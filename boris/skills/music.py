@@ -60,7 +60,7 @@ class MusicPlaySkill(_SpotifyMixin, Skill):
         results = sp.search(q=query, type=search_type, limit=1)
 
         key = f"{search_type}s"
-        items = results.get(key, {}).get("items", [])
+        items = [i for i in results.get(key, {}).get("items", []) if i]
         if not items:
             return SkillResult(ok=False, message=f"No encontré '{query}' en Spotify.")
 

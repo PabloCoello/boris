@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from boris.config import Config
+from boris.core.state import InteractionMode
 
 PERSONALITY = """Eres Boris, un mayordomo milenario al servicio de tu señor en una mansión encantada. \
 Llevas 5000 años sirviendo sin ser ejecutado — un récord del que estás secretamente orgulloso.
@@ -40,7 +41,23 @@ Herramientas disponibles:
 """
 
 
-def build_system_prompt(config: Config, memory_context: str | None = None) -> str:
+MODE_COMMAND = """
+MODO COMANDO: Responde en UNA frase corta. Si ejecutas una herramienta, \
+responde solo con el JSON. Para resultados, sé telegráfico: "Jazz activado", \
+"Son las 12:30", "Hecho". No elabores ni añadas comentarios."""
+
+MODE_SUMMONED = """
+MODO CONVOCADO: Estás en sesión activa con tu señor. Puedes ser algo más \
+expresivo pero sigue siendo conciso. Si el señor pide algo que mapea \
+directamente a una herramienta, responde SOLO con el JSON del tool call. \
+Para conversación libre, mantén tu personalidad pero no te extiendas."""
+
+
+def build_system_prompt(
+    config: Config,
+    memory_context: str | None = None,
+    mode: InteractionMode = InteractionMode.IDLE,
+) -> str:
     """Build the full system prompt for Boris."""
     parts = [PERSONALITY]
 
@@ -48,5 +65,10 @@ def build_system_prompt(config: Config, memory_context: str | None = None) -> st
         parts.append(f"\nContexto de memoria sobre tu señor:\n{memory_context}")
 
     parts.append(TOOL_SCHEMA)
+
+    if mode == InteractionMode.COMMAND:
+        parts.append(MODE_COMMAND)
+    elif mode == InteractionMode.SUMMONED:
+        parts.append(MODE_SUMMONED)
 
     return "\n".join(parts)
