@@ -31,6 +31,7 @@ class TTSConfig:
     model: str = "xtts_v2"
     language: str = "es"
     speaker_wav: str = "data/audio/reference.wav"
+    pitch_semitones: float = 0.0  # negative = deeper voice
 
 
 @dataclass

@@ -77,7 +77,12 @@ async def main_loop(config: Config):
             tts.stop()
 
             # ── Phase 2: Listen for speech (VAD-based) ───────────────
+            # Wake word detector already released the mic after detection,
+            # so AudioListener can safely open it now.
             audio = await listener.listen()
+
+            # Resume wake word listening (re-acquires mic)
+            ww_detector.resume()
 
             # ── Phase 3: Transcribe ──────────────────────────────────
             t_turn_start = time.perf_counter()
@@ -85,7 +90,7 @@ async def main_loop(config: Config):
 
             if not text.strip():
                 logger.debug("Transcripción vacía, ignorando")
-                continue
+                continue  # ww_detector already resumed above
 
             logger.info(f"Señor dice: {text}")
 
@@ -146,4 +151,5 @@ async def main_loop(config: Config):
             break
         except Exception as e:
             logger.error(f"Error en el loop: {e}")
+            ww_detector.resume()  # ensure mic is released back to detector
             await asyncio.sleep(1)

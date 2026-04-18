@@ -17,6 +17,7 @@ tts:
   model: vits_es      # vits_es (rápido, ~300ms) o xtts_v2 (lento, voz clonada)
   language: es
   speaker_wav:         # solo para xtts_v2
+  pitch_semitones: -3  # voz más grave (-3 semitonos)
 
 llm:
   model: gemma3:12b    # gemma3:12b (~7GB, rápido) o gemma4-26b (17GB, lento)

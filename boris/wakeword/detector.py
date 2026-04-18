@@ -80,6 +80,8 @@ class WakeWordDetector:
         self._loop = loop
         self._stop.clear()
         self._detected.clear()
+        self._paused = threading.Event()  # when set, listener thread pauses
+        self._resumed = threading.Event()  # listener signals it has released the device
         self._thread = threading.Thread(
             target=self._listen_loop, daemon=True, name="wakeword"
         )
@@ -88,14 +90,24 @@ class WakeWordDetector:
     def stop(self):
         """Signal the background thread to exit."""
         self._stop.set()
+        self._paused.set()  # unblock if paused
         if self._thread is not None:
             self._thread.join(timeout=2)
             self._thread = None
 
     async def wait(self):
-        """Block until the wake word is detected (async)."""
+        """Block until the wake word is detected (async).
+
+        After detection the detector's mic stream is paused so the
+        AudioListener can open the same device without conflict.
+        """
         self._detected.clear()
         await self._detected.wait()
+
+    def resume(self):
+        """Resume listening after the AudioListener is done with the mic."""
+        self._paused.clear()
+        self._resumed.clear()
 
     def reset(self):
         """Clear the detected flag and model state so we can listen again."""
@@ -104,13 +116,14 @@ class WakeWordDetector:
 
     # -- Background thread ----------------------------------------------------
 
-    def _listen_loop(self):
-        """Continuously read audio and run wake word inference."""
+    def _open_stream(self):
+        """Create and start an InputStream for the wake word mic."""
         channels = 1
         dev = self._device_id
         if dev is not None:
             info = sd.query_devices(dev)
             channels = info["max_input_channels"]
+        self._channels = channels
 
         stream = sd.InputStream(
             samplerate=SAMPLE_RATE,
@@ -119,18 +132,36 @@ class WakeWordDetector:
             blocksize=CHUNK_SAMPLES,
             device=dev,
         )
-
-        logger.debug("WakeWord listener thread started")
         stream.start()
+        return stream
+
+    def _listen_loop(self):
+        """Continuously read audio and run wake word inference."""
+        logger.debug("WakeWord listener thread started")
+        stream = self._open_stream()
 
         try:
             while not self._stop.is_set():
+                # If paused (after detection), release mic and wait
+                if self._paused.is_set():
+                    stream.stop()
+                    stream.close()
+                    logger.debug("WakeWord: mic released (paused)")
+                    self._resumed.set()  # signal that device is free
+                    # Wait until resumed or stopped
+                    while self._paused.is_set() and not self._stop.is_set():
+                        time.sleep(0.05)
+                    if self._stop.is_set():
+                        return
+                    stream = self._open_stream()
+                    logger.debug("WakeWord: mic re-acquired (resumed)")
+
                 audio, overflowed = stream.read(CHUNK_SAMPLES)
                 if overflowed:
                     logger.debug("WakeWord: audio overflow")
 
                 # Mix to mono if multi-channel
-                if channels > 1:
+                if self._channels > 1:
                     chunk = audio.mean(axis=1).astype(np.int16)
                 else:
                     chunk = audio.flatten()
@@ -143,13 +174,29 @@ class WakeWordDetector:
                         logger.info(
                             f"Wake word '{name}' detected (score={score:.3f})"
                         )
+                        # Pause stream BEFORE signalling — frees the device
+                        # so AudioListener can open it
+                        self._paused.set()
+                        stream.stop()
+                        stream.close()
+                        logger.debug("WakeWord: mic released after detection")
+                        self._resumed.set()
+
                         if self._loop is not None:
                             self._loop.call_soon_threadsafe(self._detected.set)
-                        # Small cooldown to avoid double-triggers
-                        time.sleep(0.5)
+                        # Wait until main loop calls resume()
+                        while self._paused.is_set() and not self._stop.is_set():
+                            time.sleep(0.05)
+                        if self._stop.is_set():
+                            return
+                        stream = self._open_stream()
+                        logger.debug("WakeWord: mic re-acquired after resume")
                         self._model.reset()
                         break
         finally:
-            stream.stop()
-            stream.close()
+            try:
+                stream.stop()
+                stream.close()
+            except Exception:
+                pass
             logger.debug("WakeWord listener thread stopped")

@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import librosa
 import numpy as np
 import sounddevice as sd
 from loguru import logger
@@ -108,6 +109,12 @@ class TTSEngine:
 
         wav = self.tts.tts(**tts_kwargs)
         audio = np.array(wav, dtype=np.float32)
+
+        # Pitch shift for voice character (negative = deeper)
+        if self.config.pitch_semitones != 0.0:
+            audio = librosa.effects.pitch_shift(
+                audio, sr=self._sample_rate, n_steps=self.config.pitch_semitones,
+            )
 
         # Resample to 48kHz for pipewire/ALSA compatibility
         if self._sample_rate != 48000:
