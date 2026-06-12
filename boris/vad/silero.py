@@ -177,10 +177,12 @@ class AudioListener:
                     logger.debug("Timeout sin detectar voz")
                 else:
                     logger.warning("Utterance recording timeout (30s)")
-
-        # Signal the consumer to exit and wait for it
-        audio_q.put(None)
-        await consumer_task
+            finally:
+                # Always send the sentinel — also when listen() itself is
+                # cancelled (summoned/follow-up timeouts), or the consumer
+                # thread spins on the empty queue forever
+                audio_q.put(None)
+                await consumer_task
 
         if audio_buffer:
             audio = np.concatenate(audio_buffer)
