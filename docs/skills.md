@@ -164,7 +164,11 @@ Crea un recordatorio.
 
 **Requiere:** nada (siempre activo, almacenamiento en memoria).
 
-**Nota:** los recordatorios se almacenan en memoria del proceso. Se pierden al reiniciar Boris.
+**Nota:** los recordatorios se persisten en `data/reminders.json` y sobreviven
+a reinicios. Un watcher en background los comprueba cada 15 segundos y, al
+vencer, Boris los anuncia por voz (chime + "Recordatorio, mi señor: ...") y
+los elimina. Si Boris estaba apagado a la hora del recordatorio, lo anuncia
+al arrancar de nuevo.
 
 ---
 

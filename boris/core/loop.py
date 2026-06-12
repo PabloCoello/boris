@@ -27,6 +27,12 @@ from boris.memory.loader import load_memory_context
 from boris.memory.writer import save_episodic
 from boris.skills.base import SkillRegistry
 from boris.skills.registry import build_registry
+from boris.skills.reminders import (
+    DEFAULT_REMINDERS_PATH,
+    Reminder,
+    ReminderStore,
+    watch_reminders,
+)
 from boris.stt.whisper import WhisperSTT
 from boris.tts.xtts import TTSEngine
 from boris.vad.silero import AudioListener
@@ -129,8 +135,9 @@ async def main_loop(config: Config):
     tts.set_listener(listener)
     feedback.set_listener(listener)
 
-    # Build skill registry
-    registry = build_registry(config)
+    # Build skill registry with a persistent reminder store
+    reminder_store = ReminderStore(DEFAULT_REMINDERS_PATH)
+    registry = build_registry(config, reminder_store=reminder_store)
 
     # Load memory into context
     memory_ctx = load_memory_context(
@@ -170,6 +177,15 @@ async def main_loop(config: Config):
 
     loop = asyncio.get_event_loop()
     ww_detector.start(loop)
+
+    # Background watcher: announce due reminders by voice
+    async def _announce_reminder(reminder: Reminder):
+        await asyncio.to_thread(feedback.play_reminder)
+        await tts.speak(f"Recordatorio, mi señor: {reminder.text}.")
+
+    reminder_task = asyncio.create_task(
+        watch_reminders(reminder_store, _announce_reminder), name="reminders"
+    )
 
     logger.info("Boris listo. Esperando wake word...")
 
@@ -223,6 +239,7 @@ async def main_loop(config: Config):
             # SIGINT under asyncio.run is delivered as task cancellation,
             # never as KeyboardInterrupt inside the coroutine
             logger.info("Boris se retira. Guardando memoria...")
+            reminder_task.cancel()
             ww_detector.stop()
             if history:
                 try:

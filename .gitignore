@@ -13,6 +13,7 @@ data/memory/profile.md
 data/memory/entities.md
 data/memory/index.md
 data/audio/*.wav
+data/reminders.json
 data/google-credentials.json
 data/google-token.json
 data/garmin-tokens/

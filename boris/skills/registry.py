@@ -6,16 +6,19 @@ from loguru import logger
 
 from boris.config import Config
 from boris.skills.base import SkillRegistry
+from boris.skills.reminders import ReminderSkill, RemindersListSkill, ReminderStore
 
 
-def build_registry(config: Config) -> SkillRegistry:
-    """Create and populate the skill registry based on config."""
+def build_registry(config: Config, reminder_store: ReminderStore | None = None) -> SkillRegistry:
+    """Create and populate the skill registry based on config.
+
+    Pass a reminder_store to share it with the reminder watcher; by
+    default an in-memory store is created.
+    """
     registry = SkillRegistry()
 
-    # Import and register skills conditionally
-    from boris.skills.reminders import ReminderSkill, RemindersListSkill, ReminderStore
-
-    reminder_store = ReminderStore()
+    if reminder_store is None:
+        reminder_store = ReminderStore()
     registry.register(ReminderSkill(reminder_store))
     registry.register(RemindersListSkill(reminder_store))
 

@@ -77,6 +77,17 @@ class FeedbackPlayer:
         """Confirmation beep — skill executed OK."""
         self._play(_tone(800, 0.08))
 
+    def play_reminder(self):
+        """Insistent double chime — a reminder is due."""
+        audio = np.concatenate([
+            _tone(660, 0.10),
+            _silence(0.05),
+            _tone(660, 0.10),
+            _silence(0.05),
+            _tone(880, 0.15),
+        ])
+        self._play(audio)
+
     def play_error(self):
         """Double descending beep — something failed."""
         audio = np.concatenate([

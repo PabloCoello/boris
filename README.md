@@ -247,7 +247,7 @@ boris/
     ├── calendar.py        # Google Calendar
     ├── garmin.py          # Garmin Connect
     ├── search.py          # SearXNG
-    └── reminders.py       # APScheduler
+    └── reminders.py       # Recordatorios persistentes + watcher
 
 data/
 ├── memory/                # Memoria persistente (Markdown)
