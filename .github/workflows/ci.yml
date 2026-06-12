@@ -26,7 +26,7 @@ jobs:
       # falla aquí con ModuleNotFoundError, añade el paquete a esta lista.
       - name: Install test dependencies
         run: |
-          uv venv --python 3.11
+          uv venv --clear --python 3.11
           uv pip install pytest pytest-asyncio pyyaml python-dotenv loguru aiohttp \
             google-api-python-client google-auth-oauthlib
       - name: pytest
