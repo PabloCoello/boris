@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+from collections.abc import Callable
 
 import numpy as np
 import sounddevice as sd
@@ -62,6 +63,7 @@ class WakeWordDetector:
         self._detected = asyncio.Event()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._on_detect: Callable[[], None] | None = None
 
     @staticmethod
     def _resolve_device(name: str | None) -> int | None:
@@ -114,6 +116,16 @@ class WakeWordDetector:
         """Clear the detected flag and model state so we can listen again."""
         self._detected.clear()
         self._model.reset()
+
+    def set_on_detect(self, callback: Callable[[], None]):
+        """Register a callback fired from the listener thread on detection.
+
+        This is what makes barge-in real: the main loop is blocked inside
+        tts.speak() while Boris talks, so only this thread can cut the
+        playback at the moment the wake word is heard. The callback must
+        be thread-safe and fast (e.g. TTSEngine.stop).
+        """
+        self._on_detect = callback
 
     def request_reset(self):
         """Request a thread-safe model reset (picked up on next frame).
@@ -203,6 +215,13 @@ class WakeWordDetector:
                         logger.info(
                             f"Wake word '{name}' detected (score={score:.3f})"
                         )
+                        # Barge-in: cut any ongoing playback right now,
+                        # before the slower mic handover below
+                        if self._on_detect is not None:
+                            try:
+                                self._on_detect()
+                            except Exception as e:
+                                logger.error(f"WakeWord on_detect callback: {e}")
                         # Pause stream BEFORE signalling — frees the device
                         # so AudioListener can open it
                         self._paused.set()

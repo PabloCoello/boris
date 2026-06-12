@@ -175,6 +175,10 @@ async def main_loop(config: Config):
         device_name=config.audio.input_device_name,
     )
 
+    # Barge-in: cut TTS playback from the detector thread on detection —
+    # the main loop is blocked in tts.speak() at that moment
+    ww_detector.set_on_detect(tts.stop)
+
     loop = asyncio.get_event_loop()
     ww_detector.start(loop)
 
@@ -195,7 +199,6 @@ async def main_loop(config: Config):
             await ww_detector.wait()
             ww_detector.reset()
             logger.info("Wake word detectado")
-            tts.stop()  # barge-in if TTS was playing
 
             # ── LISTENING: Capture speech ────────────────────────────
             audio = await listener.listen()

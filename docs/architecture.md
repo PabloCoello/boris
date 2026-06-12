@@ -117,7 +117,9 @@ Deteccion de wake word:
 Modo comando (barge-in):
   - resume() se llama ANTES de TTS
   - El detector escucha durante la reproduccion de voz
-  - Si detecta "Boris" durante TTS → tts.stop() → nuevo ciclo
+  - Si detecta "Boris" durante TTS, el hilo del detector invoca el
+    callback on_detect (tts.stop) y corta la reproduccion al instante;
+    el main loop, desbloqueado, arranca el nuevo ciclo
 
 Modo convocado:
   - El detector permanece pausado toda la sesion
@@ -125,7 +127,7 @@ Modo convocado:
   - resume() se llama al salir del modo convocado
 ```
 
-Implementado en `boris/wakeword/detector.py` (lineas 119-194).
+Implementado en `boris/wakeword/detector.py`.
 
 ## Echo cancellation
 
