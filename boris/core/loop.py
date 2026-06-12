@@ -219,7 +219,9 @@ async def main_loop(config: Config):
             logger.info(f"Turno completo: {t_turn_total:.0f}ms")
             _trim_history(history)
 
-        except KeyboardInterrupt:
+        except asyncio.CancelledError:
+            # SIGINT under asyncio.run is delivered as task cancellation,
+            # never as KeyboardInterrupt inside the coroutine
             logger.info("Boris se retira. Guardando memoria...")
             ww_detector.stop()
             if history:
@@ -228,7 +230,7 @@ async def main_loop(config: Config):
                 except Exception as e:
                     logger.error(f"Error guardando episodic: {e}")
             logger.info("Buenas noches, mi señor.")
-            break
+            raise
         except Exception as e:
             logger.error(f"Error en el loop: {e}")
             ww_detector.resume()
