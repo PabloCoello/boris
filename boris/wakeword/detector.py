@@ -82,6 +82,7 @@ class WakeWordDetector:
         self._detected.clear()
         self._paused = threading.Event()  # when set, listener thread pauses
         self._resumed = threading.Event()  # listener signals it has released the device
+        self._reset_requested = threading.Event()  # thread-safe model reset
         self._thread = threading.Thread(
             target=self._listen_loop, daemon=True, name="wakeword"
         )
@@ -114,6 +115,14 @@ class WakeWordDetector:
         self._detected.clear()
         self._model.reset()
 
+    def request_reset(self):
+        """Request a thread-safe model reset (picked up on next frame).
+
+        Use this after TTS playback to flush the model's internal buffers
+        that got filled with Boris's own voice during barge-in listening.
+        """
+        self._reset_requested.set()
+
     # -- Background thread ----------------------------------------------------
 
     def _open_stream(self):
@@ -138,7 +147,16 @@ class WakeWordDetector:
     def _listen_loop(self):
         """Continuously read audio and run wake word inference."""
         logger.debug("WakeWord listener thread started")
+        logger.debug("WakeWord: opening mic stream...")
         stream = self._open_stream()
+        logger.info("WakeWord: mic stream open, listening")
+
+        # Warmup: run a few silent predictions to initialize ONNX runtime
+        warmup_chunk = np.zeros(CHUNK_SAMPLES, dtype=np.int16)
+        for _ in range(5):
+            self._model.predict(warmup_chunk)
+        self._model.reset()
+        logger.info("WakeWord: model warmed up")
 
         try:
             while not self._stop.is_set():
@@ -156,6 +174,12 @@ class WakeWordDetector:
                     stream = self._open_stream()
                     logger.debug("WakeWord: mic re-acquired (resumed)")
 
+                # Check for deferred reset (after TTS playback)
+                if self._reset_requested.is_set():
+                    self._model.reset()
+                    self._reset_requested.clear()
+                    logger.debug("WakeWord: model reset (post-TTS flush)")
+
                 audio, overflowed = stream.read(CHUNK_SAMPLES)
                 if overflowed:
                     logger.debug("WakeWord: audio overflow")
@@ -167,9 +191,14 @@ class WakeWordDetector:
                     chunk = audio.flatten()
 
                 prediction = self._model.predict(chunk)
+                audio_level = np.abs(chunk).mean()
 
                 for name in self._model_names:
                     score = prediction.get(name, 0)
+                    if score > 0.05 or audio_level > 500:
+                        logger.debug(
+                            f"WakeWord: {name} score={score:.3f} audio_level={audio_level:.0f}"
+                        )
                     if score >= self._threshold:
                         logger.info(
                             f"Wake word '{name}' detected (score={score:.3f})"

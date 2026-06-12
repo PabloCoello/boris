@@ -212,6 +212,9 @@ async def main_loop(config: Config):
                     tts, feedback, listener, stt, follow_up_timeout,
                 )
 
+            # Flush wake word model after TTS to clear Boris's own voice
+            ww_detector.request_reset()
+
             t_turn_total = (time.perf_counter() - t_turn_start) * 1000
             logger.info(f"Turno completo: {t_turn_total:.0f}ms")
             _trim_history(history)
