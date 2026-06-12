@@ -81,6 +81,25 @@ async def test_timeout_returns_error():
 
 
 @pytest.mark.asyncio
+async def test_skill_uses_its_own_timeout():
+    class ImpatientSkill(SlowSkill):
+        timeout_s = 0.05
+
+    result = await ImpatientSkill().run()
+    assert result.ok is False
+    assert "timeout" in result.message.lower()
+
+
+@pytest.mark.asyncio
+async def test_explicit_timeout_overrides_skill_timeout():
+    class GenerousSkill(FakeSkill):
+        timeout_s = 100.0
+
+    result = await GenerousSkill().run(timeout=0.05, greeting="hola")
+    assert result.ok is True  # FakeSkill is instant; just exercises the override path
+
+
+@pytest.mark.asyncio
 async def test_exception_returns_error():
     skill = FailSkill()
     result = await skill.run(timeout=5.0)

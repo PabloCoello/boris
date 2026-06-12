@@ -8,8 +8,6 @@ from loguru import logger
 
 from boris.skills.base import SkillRegistry, SkillResult
 
-SKILL_TIMEOUT = 5.0
-
 
 def parse_tool_call(response: str) -> tuple[dict | None, str]:
     """Parse LLM response for tool calls.
@@ -56,7 +54,10 @@ def parse_tool_call(response: str) -> tuple[dict | None, str]:
 
 
 async def execute_tool_call(tool_call: dict, registry: SkillRegistry) -> SkillResult:
-    """Execute a parsed tool call against the skill registry."""
+    """Execute a parsed tool call against the skill registry.
+
+    Each skill runs under its own timeout_s budget.
+    """
     tool_name = tool_call.get("tool", "")
     tool_args = tool_call.get("args", {})
 
@@ -65,5 +66,13 @@ async def execute_tool_call(tool_call: dict, registry: SkillRegistry) -> SkillRe
         logger.warning(f"Tool desconocida: {tool_name}")
         return SkillResult(ok=False, message=f"No conozco la acción '{tool_name}'.")
 
+    if tool_args is None:
+        tool_args = {}
+    if not isinstance(tool_args, dict):
+        logger.warning(f"Args inválidos para {tool_name}: {tool_args!r}")
+        return SkillResult(ok=False, message=f"Argumentos inválidos para '{tool_name}'.")
+    # "timeout" is run()'s own parameter, not a skill arg the LLM may set
+    tool_args.pop("timeout", None)
+
     logger.info(f"Ejecutando skill: {tool_name}({tool_args})")
-    return await skill.run(timeout=SKILL_TIMEOUT, **tool_args)
+    return await skill.run(**tool_args)

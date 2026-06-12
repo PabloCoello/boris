@@ -41,6 +41,7 @@ class MusicPlaySkill(_SpotifyMixin, Skill):
     name = "music_play"
     description = "Reproduce música vía Spotify."
     args_doc = "query (str), type (str: artist/album/playlist/track)"
+    timeout_s = 10.0  # search + start_playback are two API round-trips
 
     def __init__(self, client_id: str, client_secret: str):
         self._client_id = client_id
@@ -83,6 +84,7 @@ class MusicControlSkill(_SpotifyMixin, Skill):
     name = "music_control"
     description = "Controla la reproducción de Spotify."
     args_doc = "action (str: pause/next/prev/volume), level (int 0-100, solo para volume)"
+    timeout_s = 10.0
 
     def __init__(self, client_id: str, client_secret: str):
         self._client_id = client_id

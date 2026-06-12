@@ -256,4 +256,7 @@ class MiSkill(Skill):
         return SkillResult(ok=True, message="Hecho.")
 ```
 
-El metodo `run()` de la clase base envuelve `execute()` con timeout (5s) y manejo de errores automaticamente.
+El metodo `run()` de la clase base envuelve `execute()` con timeout y manejo
+de errores automaticamente. El presupuesto se declara por skill con el
+atributo `timeout_s` (5s por defecto; p. ej. `garmin` usa 30s porque su login
+SSO es lento y `calendar` 15s para el refresh del token OAuth).

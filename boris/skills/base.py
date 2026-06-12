@@ -21,13 +21,18 @@ class Skill(ABC):
     name: str = ""
     description: str = ""
     args_doc: str = ""  # human-readable args spec for the LLM tool schema; empty = no args
+    timeout_s: float = 5.0  # per-skill budget; raise for skills with slow auth flows
 
     @abstractmethod
     async def execute(self, **kwargs) -> SkillResult:
         ...
 
-    async def run(self, timeout: float = 5.0, **kwargs) -> SkillResult:
-        """Execute with timeout and error handling."""
+    async def run(self, timeout: float | None = None, **kwargs) -> SkillResult:
+        """Execute with timeout and error handling.
+
+        An explicit timeout overrides the skill's own timeout_s.
+        """
+        timeout = self.timeout_s if timeout is None else timeout
         try:
             return await asyncio.wait_for(self.execute(**kwargs), timeout=timeout)
         except asyncio.TimeoutError:

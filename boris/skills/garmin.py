@@ -17,6 +17,7 @@ class GarminSkill(Skill):
     name = "garmin"
     description = "Datos de salud desde Garmin Connect."
     args_doc = "metric (str: sleep/hrv/steps/battery/activity)"
+    timeout_s = 30.0  # SSO login can take >5s and execute() retries once on expiry
 
     def __init__(self, email: str, password: str, tokenstore: str = "data/garmin-tokens"):
         self._email = email
