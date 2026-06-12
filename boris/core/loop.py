@@ -8,9 +8,11 @@ Supports two interaction modes:
 from __future__ import annotations
 
 import asyncio
+import locale
 import re
 import time
 import unicodedata
+from datetime import datetime
 from pathlib import Path
 
 from loguru import logger
@@ -52,7 +54,9 @@ async def _process_turn(
     Returns (spoken_text, tool_executed_ok).
     """
     history.append({"role": "user", "content": text})
-    messages = [{"role": "system", "content": system_prompt}] + history
+    now = datetime.now().strftime("%A %d de %B de %Y, %H:%M")
+    prompt_with_time = f"{system_prompt}\n\nFecha y hora actual: {now}."
+    messages = [{"role": "system", "content": prompt_with_time}] + history
 
     response = await llm.chat_full(messages)
     logger.info(f"Boris dice: {response[:100]}...")
@@ -106,6 +110,10 @@ def _normalize(text: str) -> str:
 
 async def main_loop(config: Config):
     """Run Boris: wake word → listen → transcribe → respond → speak, forever."""
+    try:
+        locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
+    except locale.Error:
+        pass  # Fall back to system default
     logger.info("Iniciando Boris...")
 
     # Initialize components
