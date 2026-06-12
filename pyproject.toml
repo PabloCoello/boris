@@ -35,6 +35,7 @@ dev = [
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+extend-exclude = ["training"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

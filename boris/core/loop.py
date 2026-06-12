@@ -32,7 +32,6 @@ from boris.tts.xtts import TTSEngine
 from boris.vad.silero import AudioListener
 from boris.wakeword.detector import WakeWordDetector
 
-
 # ── Helpers ─���────────────────────────────��───────────────────────────
 
 
@@ -143,7 +142,6 @@ async def main_loop(config: Config):
         logger.info(f"Memoria cargada: {len(memory_ctx)} chars")
 
     # Pre-build system prompts for each mode
-    prompt_base = build_system_prompt(config, memory_context=memory_ctx or None)
     prompt_command = build_system_prompt(
         config, memory_context=memory_ctx or None, mode=InteractionMode.COMMAND,
     )
@@ -175,7 +173,7 @@ async def main_loop(config: Config):
 
     while True:
         try:
-            # ── IDLE: Wait for wake word ───────��─────────────────────
+            # ── IDLE: Wait for wake word ─────────────────────────────
             await ww_detector.wait()
             ww_detector.reset()
             logger.info("Wake word detectado")

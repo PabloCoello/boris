@@ -5,6 +5,7 @@ Run after installing deps:
 """
 
 import os
+
 import acoustics
 
 target = os.path.join(os.path.dirname(acoustics.__file__), "directivity.py")
