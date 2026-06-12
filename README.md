@@ -20,6 +20,8 @@
 
 # Boris
 
+[![CI](https://github.com/PabloCoello/boris/actions/workflows/ci.yml/badge.svg)](https://github.com/PabloCoello/boris/actions/workflows/ci.yml)
+
 **Asistente de voz local con personalidad de mayordomo milenario.**
 
 Boris es un asistente de voz personal que corre 100% en local sobre una GPU NVIDIA. Escucha por wake word, entiende espanol, controla el hogar, gestiona calendario y musica, consulta datos de salud, y acumula memoria sobre su senor. Todo con el tono cortes pero siniestro de un mayordomo que lleva 5000 anos sirviendo sin ser ejecutado.

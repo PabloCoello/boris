@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: ruff
+        run: uvx ruff@0.15.9 check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      # Los tests unitarios no tocan el pipeline de audio/ML, así que no
+      # instalamos torch/TTS/whisper (gigas de descarga). Si un test nuevo
+      # falla aquí con ModuleNotFoundError, añade el paquete a esta lista.
+      - name: Install test dependencies
+        run: |
+          uv venv --python 3.11
+          uv pip install pytest pytest-asyncio pyyaml python-dotenv loguru aiohttp \
+            google-api-python-client google-auth-oauthlib
+      - name: pytest
+        run: .venv/bin/python -m pytest tests/unit -q
