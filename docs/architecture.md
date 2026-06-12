@@ -161,9 +161,9 @@ El prompt se construye en `boris/core/context.py` con capas:
 │ profile.md del usuario,                 │
 │ index.md del catalogo de memoria        │
 ├─────────────────────────────────────────┤
-│ TOOL_SCHEMA                             │
-│ JSON format, lista de herramientas      │
-│ disponibles con args                    │
+│ TOOL SCHEMA (dinamico)                  │
+│ JSON format, generado desde el registry │
+│ solo con las skills registradas         │
 ├─────────────────────────────────────────┤
 │ MODE (segun estado)                     │
 │ COMMAND: "responde en UNA frase"        │

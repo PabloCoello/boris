@@ -36,6 +36,7 @@ class ReminderStore:
 class ReminderSkill(Skill):
     name = "reminder"
     description = "Crea un recordatorio."
+    args_doc = "text (str), datetime (str ISO 8601)"
 
     def __init__(self, store: ReminderStore):
         self._store = store

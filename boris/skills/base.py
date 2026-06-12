@@ -20,6 +20,7 @@ class Skill(ABC):
 
     name: str = ""
     description: str = ""
+    args_doc: str = ""  # human-readable args spec for the LLM tool schema; empty = no args
 
     @abstractmethod
     async def execute(self, **kwargs) -> SkillResult:
@@ -52,3 +53,7 @@ class SkillRegistry:
 
     def list_names(self) -> list[str]:
         return list(self._skills.keys())
+
+    def all(self) -> list[Skill]:
+        """Return all skills in registration order."""
+        return list(self._skills.values())

@@ -228,10 +228,13 @@ Boris funciona sin ninguna skill externa — solo necesita Ollama para conversac
 ## Crear una skill nueva
 
 1. Crear clase en `boris/skills/tu_skill.py` que herede de `Skill`
-2. Definir `name` y `description` como atributos de clase
+2. Definir `name`, `description` y `args_doc` como atributos de clase
 3. Implementar `async execute(**kwargs) -> SkillResult`
 4. Registrar en `boris/skills/registry.py` (con condicion si requiere config)
-5. Anadir al `TOOL_SCHEMA` en `boris/core/context.py`
+
+El esquema de herramientas del prompt se genera automaticamente desde el
+registry (`build_tool_schema` en `boris/core/context.py`): solo se anuncian
+al LLM las skills registradas, con los args descritos en `args_doc`.
 
 ```python
 from boris.skills.base import Skill, SkillResult
@@ -239,6 +242,7 @@ from boris.skills.base import Skill, SkillResult
 class MiSkill(Skill):
     name = "mi_skill"
     description = "Hace algo util."
+    args_doc = "param (str)"
 
     async def execute(self, **kwargs) -> SkillResult:
         param = kwargs.get("param")

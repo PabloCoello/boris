@@ -14,6 +14,7 @@ from boris.skills.base import Skill, SkillResult
 class CalendarSkill(Skill):
     name = "calendar"
     description = "Eventos próximos de Google Calendar."
+    args_doc = "days (int, default 7)"
 
     def __init__(self, credentials_json: str):
         self._credentials_path = Path(credentials_json)

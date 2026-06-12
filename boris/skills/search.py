@@ -12,6 +12,7 @@ MAX_RESULTS = 3
 class SearchSkill(Skill):
     name = "search"
     description = "Búsqueda web vía SearXNG."
+    args_doc = "query (str)"
 
     def __init__(self, base_url: str):
         self._base_url = base_url.rstrip("/")

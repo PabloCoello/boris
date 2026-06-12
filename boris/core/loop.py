@@ -144,9 +144,11 @@ async def main_loop(config: Config):
     # Pre-build system prompts for each mode
     prompt_command = build_system_prompt(
         config, memory_context=memory_ctx or None, mode=InteractionMode.COMMAND,
+        registry=registry,
     )
     prompt_summoned = build_system_prompt(
         config, memory_context=memory_ctx or None, mode=InteractionMode.SUMMONED,
+        registry=registry,
     )
 
     history: list[dict[str, str]] = []

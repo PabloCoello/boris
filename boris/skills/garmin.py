@@ -16,6 +16,7 @@ SUPPORTED_METRICS = {"sleep", "hrv", "steps", "battery", "activity"}
 class GarminSkill(Skill):
     name = "garmin"
     description = "Datos de salud desde Garmin Connect."
+    args_doc = "metric (str: sleep/hrv/steps/battery/activity)"
 
     def __init__(self, email: str, password: str, tokenstore: str = "data/garmin-tokens"):
         self._email = email

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from boris.config import Config
 from boris.core.state import InteractionMode
+from boris.skills.base import SkillRegistry
 
 PERSONALITY = """Eres Boris, un mayordomo milenario al servicio de tu señor en una mansión encantada. \
 Llevas 5000 años sirviendo sin ser ejecutado — un récord del que estás secretamente orgulloso.
@@ -22,7 +23,7 @@ Reglas:
 - En situaciones de urgencia (recordatorios, errores), sé directo y claro primero, siniestro después.
 - Respondes SIEMPRE en español."""
 
-TOOL_SCHEMA = """
+TOOL_SCHEMA_HEADER = """
 Cuando necesites ejecutar una acción, responde ÚNICAMENTE con un bloque JSON:
 {"tool": "<nombre>", "args": {<argumentos>}}
 
@@ -30,15 +31,23 @@ Si no necesitas ejecutar ninguna acción, responde en texto normal.
 No mezcles texto y JSON en la misma respuesta.
 
 Herramientas disponibles:
-- home: Controla dispositivos del hogar. Args: action (str), entity_id (str).
-- reminder: Crea un recordatorio. Args: text (str), datetime (str ISO 8601).
-- reminders_list: Lista recordatorios pendientes. Sin args.
-- calendar: Eventos próximos del calendario. Args: days (int, default 7).
-- music_play: Reproduce música. Args: query (str), type (str: artist/album/playlist).
-- music_control: Controla reproducción. Args: action (str: pause/next/prev/volume).
-- search: Búsqueda web. Args: query (str).
-- garmin: Datos de salud. Args: metric (str: sleep/hrv/steps/battery/activity).
 """
+
+
+def build_tool_schema(registry: SkillRegistry) -> str:
+    """Render the tool block from the skills actually registered.
+
+    Returns "" when the registry is empty so the prompt never advertises
+    tools that would fail with "no conozco la acción".
+    """
+    skills = registry.all()
+    if not skills:
+        return ""
+    lines = []
+    for skill in skills:
+        args = f"Args: {skill.args_doc}." if skill.args_doc else "Sin args."
+        lines.append(f"- {skill.name}: {skill.description} {args}")
+    return TOOL_SCHEMA_HEADER + "\n".join(lines)
 
 
 MODE_COMMAND = """
@@ -57,6 +66,7 @@ def build_system_prompt(
     config: Config,
     memory_context: str | None = None,
     mode: InteractionMode = InteractionMode.IDLE,
+    registry: SkillRegistry | None = None,
 ) -> str:
     """Build the full system prompt for Boris."""
     parts = [PERSONALITY]
@@ -64,7 +74,10 @@ def build_system_prompt(
     if memory_context:
         parts.append(f"\nContexto de memoria sobre tu señor:\n{memory_context}")
 
-    parts.append(TOOL_SCHEMA)
+    if registry is not None:
+        tool_schema = build_tool_schema(registry)
+        if tool_schema:
+            parts.append(tool_schema)
 
     if mode == InteractionMode.COMMAND:
         parts.append(MODE_COMMAND)

@@ -40,6 +40,7 @@ class _SpotifyMixin:
 class MusicPlaySkill(_SpotifyMixin, Skill):
     name = "music_play"
     description = "Reproduce música vía Spotify."
+    args_doc = "query (str), type (str: artist/album/playlist/track)"
 
     def __init__(self, client_id: str, client_secret: str):
         self._client_id = client_id
@@ -81,6 +82,7 @@ class MusicPlaySkill(_SpotifyMixin, Skill):
 class MusicControlSkill(_SpotifyMixin, Skill):
     name = "music_control"
     description = "Controla la reproducción de Spotify."
+    args_doc = "action (str: pause/next/prev/volume), level (int 0-100, solo para volume)"
 
     def __init__(self, client_id: str, client_secret: str):
         self._client_id = client_id
