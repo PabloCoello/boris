@@ -23,3 +23,5 @@ data/garmin-tokens/
 htmlcov/
 *.onnx
 *.npy
+training/wakeword/piper-sample-generator/
+training/wakeword/output/
